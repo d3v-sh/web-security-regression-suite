@@ -1,0 +1,101 @@
+diff --git a/routes/appVersion.ts b/routes/appVersion.ts
+index bc4a2d589..80b5f3da6 100644
+--- a/routes/appVersion.ts
++++ b/routes/appVersion.ts
+@@ -8,10 +8,20 @@ import { type Request, type Response } from 'express'
+ 
+ import * as utils from '../lib/utils'
+ 
++// Before
++// export function retrieveAppVersion () {
++//   return (_req: Request, res: Response) => {
++//     res.json({
++//       version: config.get('application.showVersionNumber') ? utils.version() : ''
++//     })
++//   }
++// }
++
++// After-fix
+ export function retrieveAppVersion () {
+   return (_req: Request, res: Response) => {
+-    res.json({
+-      version: config.get('application.showVersionNumber') ? utils.version() : ''
++    res.status(200).json({
++      status: 'ok'
+     })
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/routes/updateUserProfile.ts b/routes/updateUserProfile.ts
+index 0d7302fc3..5674a14ba 100644
+--- a/routes/updateUserProfile.ts
++++ b/routes/updateUserProfile.ts
+@@ -20,7 +20,12 @@ export function updateUserProfile () {
+       next(new Error('Blocked illegal activity by ' + req.socket.remoteAddress))
+       return
+     }
+-
++    // Remediation for WEB-01 / WEB-T01: Enforce server-side type and length constraints
++    const username = req.body.username
++    if (typeof username !== 'string' || username.trim().length === 0 || username.length > 50) {
++      res.status(400).json({ error: 'Invalid username: must be between 1 and 50 characters.' })
++      returns
++    }
+     try {
+       const user = await UserModel.findByPk(loggedInUser.data.id)
+       if (!user) {
+diff --git a/server.ts b/server.ts
+index d1d9a4cc9..bd0a7b068 100644
+--- a/server.ts
++++ b/server.ts
+@@ -184,10 +184,30 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
+   app.options('*', cors())
+   app.use(cors())
+ 
++  // Before Fix
++
+   /* Security middleware */
++  // app.use(helmet.noSniff())
++  // app.use(helmet.frameguard())
++  // app.use(helmet.xssFilter()); // = no protection from persisted XSS via RESTful API
++
++  // After Fix
+   app.use(helmet.noSniff())
+   app.use(helmet.frameguard())
+-  // app.use(helmet.xssFilter()); // = no protection from persisted XSS via RESTful API
++  app.use(
++    helmet.contentSecurityPolicy({
++      directives: {
++        defaultSrc: ["'self'"],
++        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
++        styleSrc: ["'self'", "'unsafe-inline'"],
++        imgSrc: ["'self'", 'data:', 'blob:'],
++        connectSrc: ["'self'"],
++        frameAncestors: ["'self'"]
++      }
++    })
++  )
++  app.use(helmet.referrerPolicy({ policy: 'strict-origin-when-cross-origin' }))
++
+   app.disable('x-powered-by')
+   app.use(featurePolicy({
+     features: {
+@@ -537,6 +557,17 @@ function configureApp (app: ReturnType<typeof express>, seq: typeof sequelize) {
+   ]
+ 
+   for (const { name, exclude, model, include } of autoModels) {
++    if (name === 'User') {
++      app.get(['/api/Users', '/api/Users/:id'], (req: Request, res: Response, next: NextFunction) => {
++        const user = security.authenticatedUsers.from(req)
++        if (!user || user.data.role !== 'admin') {
++          res.status(403).json({ error: 'Forbidden: Administrator role required' })
++          return
++        }
++        next()
++      })
++    }
++
+     const resource = finale.resource({
+       model,
+       endpoints: [`/api/${name}s`, `/api/${name}s/:id`],

@@ -1,0 +1,5 @@
+test_id,test_description,expected_secure_result
+WEB-T01,Send a 500-character display_name to local fixture,Request rejected with 400; no crash; no stack trace.
+WEB-T02,Submit harmless text containing <tag> to local fixture,Output is encoded as text; no script execution.
+WEB-T03,Use viewer role against protected admin fixture,Access denied; no protected data returned.
+WEB-T04,Request public health endpoint,Only approved status fields are returned.
