@@ -47,7 +47,7 @@ web-security-regression-suite/
 
 ```bash
 # 1. Clone this repository
-git clone <your-repo-url> web-security-regression-suite
+git clone https://github.com/d3v-sh/web-security-regression-suite web-security-regression-suite
 cd web-security-regression-suite
 
 # 2. Verify Go toolchain
