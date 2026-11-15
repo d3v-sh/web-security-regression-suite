@@ -68,6 +68,7 @@ No `go get` is needed; the suite has no external dependencies.
 ```bash
 # Build a binary
 go build -o regression_suite regression_suite.go
+# Run the suite
 ./regression_suite -target http://localhost:3000 \
   -csv fixtures/web_retest_cases.csv \
   -out reports/security_regression_report-fixed.md
