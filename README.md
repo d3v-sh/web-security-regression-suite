@@ -66,15 +66,11 @@ No `go get` is needed; the suite has no external dependencies.
 ## Usage
 
 ```bash
-# Run directly
-go run regression_suite.go
-
-# Or build a binary
+# Build a binary
 go build -o regression_suite regression_suite.go
-./regression_suite
-
-# Save output as a report
-go run regression_suite.go | tee reports/run_$(date +%Y%m%d_%H%M%S).txt
+./regression_suite -target http://localhost:3000 \
+  -csv fixtures/web_retest_cases.csv \
+  -out reports/security_regression_report-fixed.md
 ```
 
 The suite expects `fixtures/web_retest_cases.csv` relative to the working directory, so run from the repository root.
